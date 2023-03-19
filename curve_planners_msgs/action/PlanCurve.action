@@ -1,0 +1,11 @@
+#goal definition
+geometry_msgs/PoseStamped start     # Start pose
+geometry_msgs/PoseStamped goal    # Goal pose
+string planner_type     # Type of planner to be used
+
+---
+#result definition
+nav_msgs/Path plan                        # Path from start to goal
+bool success     # is needed??
+---
+#feedback definition
