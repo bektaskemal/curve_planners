@@ -52,8 +52,6 @@ private:
 
   void handle_accepted(const std::shared_ptr<GoalHandleFibonacci> goal_handle) {
     using namespace std::placeholders;
-    // this needs to return quickly to avoid blocking the executor, so spin up a
-    // new thread
     std::thread{std::bind(&PlanCurveActionServer::execute, this, _1),
                 goal_handle}
         .detach();
@@ -64,25 +62,44 @@ private:
     const auto goal = goal_handle->get_goal();
 
     auto result = std::make_shared<PlanCurve::Result>();
-    auto start = fromMsg(goal->start);
-    auto plan = dubins_planner_.plan(start, fromMsg(goal->goal));
 
-    if (plan) {
-      // L 1.2762808416867601
-      // S 3.741657386773941
-      // R 1.2762808416867601
-      // curve_planners::Path path;
-      // path.at(0) = {curve_planners::SegmentType::Left, 1.2762808416867601};
-      // path.at(1) =
-      // {curve_planners::SegmentType::Straight, 3.741657386773941}; path.at(2)
-      // = {curve_planners::SegmentType::Right, 1.2762808416867601};
-      result->plan = toMsg(plan.value(), start, 1.0);
-      path_publisher_->publish(result->plan);
+    std::vector<curve_planners::Pose> path_points;
+    path_points.push_back(fromMsg(goal->start));
+    for (auto &waypoint : goal->waypoints) {
+      path_points.push_back(fromMsg(waypoint));
+    }
+    path_points.push_back(fromMsg(goal->goal));
+
+    std::vector<Path> plans;
+    for (size_t i = 0; i < path_points.size() - 1; i++) {
+      auto plan = dubins_planner_.plan(path_points[i], path_points[i + 1]);
+      if (!plan) {
+        result->success = false;
+        goal_handle->succeed(result);
+        RCLCPP_ERROR(this->get_logger(), "Planning failed.");
+        return;
+      }
+      plans.push_back(plan.value());
+    }
+    Path merged_path;
+    for (auto &plan : plans) {
+      merged_path.insert(merged_path.end(), plan.begin(), plan.end());
+    }
+
+    auto res =
+        toMsg(merged_path,
+              goal->start.header.frame_id); // TODO: Remove assumption that all
+                                            // points are in the same frame
+    result->plan = res;
+    path_publisher_->publish(res);
+
+    if (rclcpp::ok()) {
       result->success = true;
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
       return;
     }
+
     result->success = false;
     goal_handle->abort(result);
     RCLCPP_INFO(this->get_logger(), "Goal aborted");

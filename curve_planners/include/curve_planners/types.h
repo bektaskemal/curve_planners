@@ -34,6 +34,7 @@ struct Pose {
 
   void normalize_theta() { theta = angles::normalize_angle(theta); }
 };
+using Path = std::vector<Pose>;
 
 auto fromMsg(geometry_msgs::msg::PoseStamped const &pose) -> Pose {
   return {pose.pose.position.x, pose.pose.position.y,
@@ -41,6 +42,7 @@ auto fromMsg(geometry_msgs::msg::PoseStamped const &pose) -> Pose {
               pose.pose.orientation.x, pose.pose.orientation.y,
               pose.pose.orientation.z, pose.pose.orientation.w))};
 }
+
 auto toMsg(Pose const &pose, std::string const &frame_id)
     -> geometry_msgs::msg::PoseStamped {
   geometry_msgs::msg::PoseStamped result;
@@ -67,93 +69,39 @@ auto fromMsg(nav_msgs::msg::Path const &path) -> std::vector<Pose> {
   return result;
 }
 
+struct DubinsInputs {
+  DubinsInputs() = default;
+  DubinsInputs(Pose const &start, Pose const &goal, double min_turning_radius) {
+    auto delta = goal - start;
+    double dist = delta.norm();
+    normalized_dist = dist / min_turning_radius;
+    theta = delta.xyAngle();
+    alpha = angles::normalize_angle_positive(start.theta - theta);
+    beta = angles::normalize_angle_positive(goal.theta - theta);
+  }
+  double alpha;
+  double beta;
+  double normalized_dist;
+  double theta;
+};
+
 enum class SegmentType { Left, Right, Straight };
 struct Segment {
   SegmentType type;
   double normalized_length;
 };
-using Path = std::array<Segment, 3>;
+using DubinsPath = std::array<Segment, 3>;
 
-// auto sampleSegmentNormalized(Pose const &start, double t, SegmentType type)
-//     -> Pose {
-//   Pose res{0, 0, start.theta};
-//   if (type == SegmentType::Left) {
-//     res.theta += t;
-//     res.x = start.x + sin(res.theta) - sin(start.theta);
-//     res.y = start.y - cos(res.theta) + cos(start.theta);
-//   } else if (type == SegmentType::Right) {
-//     res.theta -= t;
-//     res.x = start.x - sin(res.theta) + sin(start.theta);
-//     res.y = start.y + cos(res.theta) - cos(start.theta);
-//   } else if (type == SegmentType::Straight) {
-//     res.x = start.x + cos(start.theta) * t;
-//     res.y = start.y + sin(start.theta) * t;
-//   }
-//   res.normalize_theta();
-//   return res;
-// }
-
-auto samplePose(Pose const &start, double length, SegmentType type,
-                double radius) -> Pose {
-  Pose res{};
-  if (type == SegmentType::Straight) {
-    res.x = start.x + length / radius * std::cos(start.theta);
-    res.y = start.y + length / radius * std::sin(start.theta);
-    res.theta = start.theta;
-
-  } else {
-    auto ldx = std::sin(length) / radius;
-    auto ldy = 0.0;
-    if (type == SegmentType::Left) {
-      ldy = (1.0 - std::cos(length)) / radius;
-    } else if (type == SegmentType::Right) {
-      ldy = (1.0 - std::cos(length)) / -radius;
-    }
-    auto gdx = std::cos(-start.theta) * ldx + std::sin(-start.theta) * ldy;
-    auto gdy = -std::sin(-start.theta) * ldx + std::cos(-start.theta) * ldy;
-
-    res.x = start.x + gdx;
-    res.y = start.y + gdy;
-    if (type == SegmentType::Left) {
-      res.theta = start.theta + length;
-    } else if (type == SegmentType::Right) {
-      res.theta = start.theta - length;
-    }
-  }
-  res.normalize_theta();
-  return res;
-}
-
-// convert Path to nav_msgs::msg::Path by sampling points on segments
-auto toMsg(Path const &path, Pose const &start, double radius)
+// Convert Path to nav_msgs::msg::Path
+auto toMsg(Path const &path, std::string const &frame_id)
     -> nav_msgs::msg::Path {
-
   nav_msgs::msg::Path result;
-  result.header.frame_id = "map";
+  result.header.frame_id = frame_id;
   result.header.stamp = rclcpp::Clock().now();
-
-  auto step_size = 0.1 / radius;
-  std::vector<Pose> poses;
-  poses.push_back(start);
-  for (auto const &segment : path) {
-    std::cout << "segment type: " << (int)segment.type << std::endl;
-    std::cout << "segment length: " << segment.normalized_length << std::endl;
-    auto origin = poses.back();
-    auto length = step_size;
-    while (std::abs(length) <= std::abs(segment.normalized_length)) {
-      auto pose = samplePose(origin, length, segment.type, radius);
-      poses.push_back(pose);
-      length += step_size;
-    }
-    auto pose = samplePose(origin, std::abs(segment.normalized_length),
-                           segment.type, radius);
-    poses.push_back(pose);
-  }
-
-  std::transform(poses.begin(), poses.end(), std::back_inserter(result.poses),
-                 [](Pose const &pose) { return toMsg(pose, "map"); });
-
+  result.poses.resize(path.size());
+  std::transform(
+      path.begin(), path.end(), result.poses.begin(),
+      [&frame_id](Pose const &pose) { return toMsg(pose, frame_id); });
   return result;
 }
-
 } // namespace curve_planners
