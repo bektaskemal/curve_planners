@@ -7,16 +7,18 @@ DubinsPlanner::DubinsPlanner(double curve_radius)
 
 auto DubinsPlanner::plan(Pose const &start, Pose const &goal)
     -> tl::expected<Path, std::string> {
-  return planCurves(start, goal)
-      .and_then([&](DubinsPath const &path) -> tl::expected<Path, std::string> {
-        return toPath(path, start);
-      });
+  auto plans = planCurves(start, goal);
+  if (plans.empty()) {
+    return tl::make_unexpected("No plans found");
+  }
+  return toPath(plans.front(), start);
 }
 
 auto DubinsPlanner::planCurves(Pose const &start, Pose const &goal)
-    -> tl::expected<DubinsPath, std::string> {
+    -> std::vector<DubinsPath> {
   DubinsInputs inputs(start, goal, curve_radius_);
   std::vector<DubinsPath> plans;
+  plans.reserve(6);
 
   auto calc_path_length = [](const DubinsPath &path) {
     return std::accumulate(path.begin(), path.end(), 0.0,
@@ -24,19 +26,13 @@ auto DubinsPlanner::planCurves(Pose const &start, Pose const &goal)
                              return acc + std::abs(segment.normalized_length);
                            });
   };
-  DubinsPath best_plan;
-  double min_length = std::numeric_limits<double>::max();
 
   auto run_planner_func = [&](auto func) {
     if (auto res = func(inputs); res.has_value()) {
-      double length = calc_path_length(res.value());
-      std::cout << "length: " << length << std::endl;
-      if (length < min_length) {
-        min_length = length;
-        best_plan = res.value();
-      }
+      plans.push_back(res.value());
     }
   };
+
   run_planner_func(dubins_LSL);
   run_planner_func(dubins_RSR);
   run_planner_func(dubins_LSR);
@@ -44,10 +40,11 @@ auto DubinsPlanner::planCurves(Pose const &start, Pose const &goal)
   run_planner_func(dubins_LRL);
   run_planner_func(dubins_RLR);
 
-  if (min_length == std::numeric_limits<double>::max()) {
-    return tl::make_unexpected("Couldn't find a path!");
-  }
-  return best_plan;
+  std::sort(plans.begin(), plans.end(),
+            [&](const DubinsPath &a, const DubinsPath &b) {
+              return calc_path_length(a) < calc_path_length(b);
+            });
+  return plans;
 }
 
 auto DubinsPlanner::dubins_LSL(DubinsInputs const &inputs)
@@ -59,8 +56,8 @@ auto DubinsPlanner::dubins_LSL(DubinsInputs const &inputs)
   if (p_squared < 0) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
   double tmp0 =
       inputs.normalized_dist +
@@ -88,8 +85,8 @@ auto DubinsPlanner::dubins_RSR(DubinsInputs const &inputs)
   if (p_squared < 0) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
   double tmp1 = std::atan2((std::cos(inputs.alpha) - std::cos(inputs.beta)),
                            tmp0); // TODO: Better naming
@@ -110,8 +107,8 @@ auto DubinsPlanner::dubins_LSR(DubinsInputs const &inputs)
   if (p_squared < 0) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
 
   double p = sqrt(p_squared);
@@ -137,8 +134,8 @@ auto DubinsPlanner::dubins_RSL(DubinsInputs const &inputs)
   if (p_squared < 0) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
 
   double p = sqrt(p_squared);
@@ -164,8 +161,8 @@ auto DubinsPlanner::dubins_RLR(DubinsInputs const &inputs)
   if (std::abs(tmp) > 1) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
 
   double p = angles::normalize_angle_positive(2 * M_PI - std::acos(tmp));
@@ -194,8 +191,8 @@ auto DubinsPlanner::dubins_LRL(DubinsInputs const &inputs)
   if (std::abs(tmp) > 1) {
     return tl::make_unexpected(
         "P squared smaller than zero so dubins failed."); // TODO: Check
-                                                          // actual meaning of
-                                                          // it
+                                                          // actual meaning
+                                                          // of it
   }
 
   double p = angles::normalize_angle_positive(2 * M_PI - std::acos(tmp));

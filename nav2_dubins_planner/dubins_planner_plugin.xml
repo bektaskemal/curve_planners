@@ -1,0 +1,5 @@
+<library path="nav2_dubins_planner_plugin">
+	<class name="nav2_dubins_planner/DubinsPlanner" type="nav2_dubins_planner::DubinsPlanner" base_class_type="nav2_core::GlobalPlanner">
+	  <description>An implementation of dubins planner.</description>
+	</class>
+</library>

@@ -31,21 +31,28 @@ set (dependencies
 
 include_directories(include)
 
+set(library_name ${PROJECT_NAME})
 
-add_library(${PROJECT_NAME} SHARED 
+add_library(${library_name} SHARED 
         src/dubins_planner.cpp)
 
-ament_target_dependencies(${PROJECT_NAME}
+ament_target_dependencies(${library_name}
   ${dependencies}
 )
 
 add_executable(${PROJECT_NAME}_node src/main.cpp)
 ament_target_dependencies(${PROJECT_NAME}_node ${dependencies})
-target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME}_node ${library_name})
+
+install(DIRECTORY include/
+  DESTINATION include/
+)
 
 install(TARGETS
-  ${PROJECT_NAME}_node
-  DESTINATION lib/${PROJECT_NAME})
+  ${library_name} ${PROJECT_NAME}_node
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(PROGRAMS
         scripts/rviz_relay.py scripts/rviz_relay_wp.py 
@@ -68,4 +75,7 @@ install(DIRECTORY rviz DESTINATION share/${PROJECT_NAME})
 #   )
 # endif()
 
+ament_export_include_directories(include)
+ament_export_libraries(${library_name})
+ament_export_dependencies(${dependencies})
 ament_package()
