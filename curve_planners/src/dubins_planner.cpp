@@ -218,27 +218,27 @@ auto DubinsPlanner::samplePose(Pose const &start, double length,
                                SegmentType type, double radius) -> Pose {
   Pose res{};
   if (type == SegmentType::Straight) {
-    res.x = start.x + length / radius * std::cos(start.theta);
-    res.y = start.y + length / radius * std::sin(start.theta);
+    res.x = start.x + length * std::cos(start.theta);
+    res.y = start.y + length * std::sin(start.theta);
     res.theta = start.theta;
 
   } else {
-    auto ldx = std::sin(length) / radius;
+    auto ldx = std::sin(length / radius);
     auto ldy = 0.0;
     if (type == SegmentType::Left) {
-      ldy = (1.0 - std::cos(length)) / radius;
+      ldy = (1.0 - std::cos(length / radius));
     } else if (type == SegmentType::Right) {
-      ldy = (1.0 - std::cos(length)) / -radius;
+      ldy = -(1.0 - std::cos(length / radius));
     }
     auto gdx = std::cos(-start.theta) * ldx + std::sin(-start.theta) * ldy;
     auto gdy = -std::sin(-start.theta) * ldx + std::cos(-start.theta) * ldy;
 
-    res.x = start.x + gdx;
-    res.y = start.y + gdy;
+    res.x = start.x + gdx * radius;
+    res.y = start.y + gdy * radius;
     if (type == SegmentType::Left) {
-      res.theta = start.theta + length;
+      res.theta = start.theta + length / radius;
     } else if (type == SegmentType::Right) {
-      res.theta = start.theta - length;
+      res.theta = start.theta - length / radius;
     }
   }
   res.normalize_theta();
@@ -248,23 +248,24 @@ auto DubinsPlanner::samplePose(Pose const &start, double length,
 auto DubinsPlanner::toPath(DubinsPath const &path, Pose const &start) -> Path {
 
   Path result;
-
-  auto step_size = 0.1 / curve_radius_;
   result.push_back(start);
+
+  auto step_size = 0.1;
   for (auto const &segment : path) {
     auto origin = result.back();
     auto length = step_size;
-    while (std::abs(length) <= std::abs(segment.normalized_length)) {
+    while (std::abs(length) <=
+           std::abs(segment.normalized_length) * curve_radius_) {
       auto pose = samplePose(origin, length, segment.type, curve_radius_);
       result.push_back(pose);
       length += step_size;
     }
-    auto pose = samplePose(origin, std::abs(segment.normalized_length),
-                           segment.type, curve_radius_);
+    auto pose =
+        samplePose(origin, std::abs(segment.normalized_length) * curve_radius_,
+                   segment.type, curve_radius_);
     result.push_back(pose);
   }
 
   return result;
 }
-
 } // namespace curve_planners
