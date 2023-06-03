@@ -15,7 +15,6 @@ find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/PlanCurve.srv"
   "action/PlanCurve.action"
   DEPENDENCIES geometry_msgs nav_msgs # Add packages that above messages depend on, in this case geometry_msgs for Sphere.msg
 )

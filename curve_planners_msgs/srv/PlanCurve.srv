@@ -1,7 +1,0 @@
-# Service definition for path planning service
-geometry_msgs/PoseStamped start     # Start pose
-geometry_msgs/PoseStamped goal    # Goal pose
-string planner_type     # Type of planner to be used
-
----
-nav_msgs/Path plan                        # Path from start to goal
