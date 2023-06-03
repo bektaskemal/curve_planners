@@ -1,6 +1,7 @@
-planners: ["dubins", "reeds-shepp"]
-use_rviz_goal: true
-base_frame: base_link # Used to determine initial pose for Rviz goal
-backwards_driving_allowed: false
-kinematics:
-  min_turning_radius: 0.5
+curve_planners_node:
+  ros__parameters:
+    planners:
+      - dubins
+    dubins:
+      type: "DubinsPlanner"
+      curve_radius: 2.0

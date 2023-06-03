@@ -33,7 +33,9 @@ include_directories(include)
 
 
 add_library(${PROJECT_NAME} SHARED 
-        src/dubins_planner.cpp)
+        src/action_server.cpp
+        src/dubins_planner.cpp
+      )
 
 ament_target_dependencies(${PROJECT_NAME}
   ${dependencies}
@@ -53,6 +55,7 @@ install(PROGRAMS
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY rviz DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY params DESTINATION share/${PROJECT_NAME})
 
 
 # if(BUILD_TESTING)

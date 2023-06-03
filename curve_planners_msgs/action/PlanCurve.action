@@ -2,7 +2,7 @@
 geometry_msgs/PoseStamped start     # Start pose
 geometry_msgs/PoseStamped goal    # Goal pose
 geometry_msgs/PoseStamped[] waypoints #Waypoints
-string planner_type     # Type of planner to be used
+string planner     # Name of planner to be used
 
 ---
 #result definition

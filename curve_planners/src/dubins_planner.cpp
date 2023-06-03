@@ -30,7 +30,6 @@ auto DubinsPlanner::planCurves(Pose const &start, Pose const &goal)
   auto run_planner_func = [&](auto func) {
     if (auto res = func(inputs); res.has_value()) {
       double length = calc_path_length(res.value());
-      std::cout << "length: " << length << std::endl;
       if (length < min_length) {
         min_length = length;
         best_plan = res.value();

@@ -25,6 +25,7 @@ class GoalSubscriberNode(Node):
             1
         )
         self.goal_msg = PlanCurve.Goal()
+        self.goal_msg.planner = 'dubins'
         self.start_set = False
 
         self.waypoint_publisher = self.create_publisher(PoseArray, 'waypoints', 1)
@@ -32,6 +33,8 @@ class GoalSubscriberNode(Node):
     def goal_callback(self, pose_stamped_msg):
         self.goal_msg.goal.pose = pose_stamped_msg.pose
         self.goal_msg.goal.header = pose_stamped_msg.header
+        if not self.start_set:
+            self.goal_msg.start.header = pose_stamped_msg.header
         self.send_goal(self.goal_msg)  
 
         wp_msg = PoseArray()

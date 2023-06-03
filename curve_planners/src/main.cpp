@@ -1,6 +1,5 @@
 
 #include "curve_planners/action_server.h"
-#include "curve_planners/types.h"
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);

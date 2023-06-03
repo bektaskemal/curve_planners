@@ -36,14 +36,14 @@ struct Pose {
 };
 using Path = std::vector<Pose>;
 
-auto fromMsg(geometry_msgs::msg::PoseStamped const &pose) -> Pose {
+inline auto fromMsg(geometry_msgs::msg::PoseStamped const &pose) -> Pose {
   return {pose.pose.position.x, pose.pose.position.y,
           tf2::getYaw(tf2::Quaternion(
               pose.pose.orientation.x, pose.pose.orientation.y,
               pose.pose.orientation.z, pose.pose.orientation.w))};
 }
 
-auto toMsg(Pose const &pose, std::string const &frame_id)
+inline auto toMsg(Pose const &pose, std::string const &frame_id)
     -> geometry_msgs::msg::PoseStamped {
   geometry_msgs::msg::PoseStamped result;
   result.header.frame_id = frame_id;
@@ -60,7 +60,7 @@ auto toMsg(Pose const &pose, std::string const &frame_id)
   return result;
 }
 
-auto fromMsg(nav_msgs::msg::Path const &path) -> std::vector<Pose> {
+inline auto fromMsg(nav_msgs::msg::Path const &path) -> std::vector<Pose> {
   std::vector<Pose> result(path.poses.size());
   std::transform(path.poses.begin(), path.poses.end(), result.begin(),
                  [](geometry_msgs::msg::PoseStamped const &pose) {
@@ -93,7 +93,7 @@ struct Segment {
 using DubinsPath = std::array<Segment, 3>;
 
 // Convert Path to nav_msgs::msg::Path
-auto toMsg(Path const &path, std::string const &frame_id)
+inline auto toMsg(Path const &path, std::string const &frame_id)
     -> nav_msgs::msg::Path {
   nav_msgs::msg::Path result;
   result.header.frame_id = frame_id;

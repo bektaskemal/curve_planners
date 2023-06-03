@@ -25,6 +25,7 @@ class GoalSubscriberNode(Node):
             1
         )
         self.goal_msg = PlanCurve.Goal()
+        self.goal_msg.planner = 'dubins'
         self.goal_set = False
 
     def goal_callback(self, pose_stamped_msg):
