@@ -46,8 +46,12 @@ ament_target_dependencies(${PROJECT_NAME}_node ${dependencies})
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
 
 install(TARGETS
+  ${PROJECT_NAME}
   ${PROJECT_NAME}_node
-  DESTINATION lib/${PROJECT_NAME})
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
 install(PROGRAMS
         scripts/rviz_relay.py scripts/rviz_relay_wp.py 
@@ -71,4 +75,7 @@ install(DIRECTORY params DESTINATION share/${PROJECT_NAME})
 #   )
 # endif()
 
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
+ament_export_dependencies(${dependencies})
 ament_package()
